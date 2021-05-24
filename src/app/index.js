@@ -1,6 +1,7 @@
 //THREEJS RELATED letIABLES
 import '../style/app.scss';
 import * as THREE from 'three';
+import { TweenMax, Power4, Power0, Power1, Power2, Power3, Back } from 'gsap/all'
 
 let scene,
     camera, fieldOfView, aspectRatio, nearPlane, farPlane,
@@ -34,7 +35,10 @@ let monster;
 let carrot;
 let obstacle;
 let fieldGameOver, fieldDistance;
-
+let earGeom;
+let floor;
+let floorGrass;
+let bonusParticles;
 //SCREEN & MOUSE letIABLES
 
 let HEIGHT, WIDTH, windowHalfX, windowHalfY,
@@ -160,8 +164,8 @@ function handleWindowResize() {
 
 
 function handleMouseDown(event){
-    if (gameStatus == "play") hero.jump();
-    else if (gameStatus == "readyToReplay"){
+    if (gameStatus === "play") hero.jump();
+    else if (gameStatus === "readyToReplay"){
         replay();
     }
 }
@@ -197,13 +201,13 @@ function createFloor() {
     //floorShadow.rotation.x = -Math.PI / 2;
     floorShadow.receiveShadow = true;
 
-    const floorGrass = new THREE.Mesh(new THREE.SphereGeometry(floorRadius-.5, 50, 50), new THREE.MeshBasicMaterial({
+    floorGrass = new THREE.Mesh(new THREE.SphereGeometry(floorRadius-.5, 50, 50), new THREE.MeshBasicMaterial({
         color: 0x7abf8e
     }));
     //floor.rotation.x = -Math.PI / 2;
     floorGrass.receiveShadow = false;
 
-    const floor = new THREE.Group();
+    floor = new THREE.Group();
     floor.position.y = -floorRadius;
 
     floor.add(floorShadow);
@@ -219,7 +223,7 @@ const Hero = function() {
     this.body = new THREE.Group();
     this.mesh.add(this.body);
 
-    let torsoGeom = new THREE.CubeGeometry(7, 7, 10, 1);
+    let torsoGeom = new THREE.BoxGeometry(7, 7, 10, 1);
 
     this.torso = new THREE.Mesh(torsoGeom, brownMat);
     this.torso.position.z = 0;
@@ -227,14 +231,14 @@ const Hero = function() {
     this.torso.castShadow = true;
     this.body.add(this.torso);
 
-    let pantsGeom = new THREE.CubeGeometry(9, 9, 5, 1);
+    let pantsGeom = new THREE.BoxGeometry(9, 9, 5, 1);
     this.pants = new THREE.Mesh(pantsGeom, whiteMat);
     this.pants.position.z = -3;
     this.pants.position.y = 0;
     this.pants.castShadow = true;
     this.torso.add(this.pants);
 
-    let tailGeom = new THREE.CubeGeometry(3, 3, 3, 1);
+    let tailGeom = new THREE.BoxGeometry(3, 3, 3, 1);
     tailGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,-2));
     this.tail = new THREE.Mesh(tailGeom, lightBrownMat);
     this.tail.position.z = -4;
@@ -244,7 +248,7 @@ const Hero = function() {
 
     this.torso.rotation.x = -Math.PI/8;
 
-    let headGeom = new THREE.CubeGeometry(10, 10, 13, 1);
+    let headGeom = new THREE.BoxGeometry(10, 10, 13, 1);
 
     headGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,7.5));
     this.head = new THREE.Mesh(headGeom, brownMat);
@@ -253,7 +257,7 @@ const Hero = function() {
     this.head.castShadow = true;
     this.body.add(this.head);
 
-    let cheekGeom = new THREE.CubeGeometry(1, 4, 4, 1);
+    let cheekGeom = new THREE.BoxGeometry(1, 4, 4, 1);
     this.cheekR = new THREE.Mesh(cheekGeom, pinkMat);
     this.cheekR.position.x = -5;
     this.cheekR.position.z = 7;
@@ -266,14 +270,14 @@ const Hero = function() {
     this.head.add(this.cheekL);
 
 
-    let noseGeom = new THREE.CubeGeometry(6, 6, 3, 1);
+    let noseGeom = new THREE.BoxGeometry(6, 6, 3, 1);
     this.nose = new THREE.Mesh(noseGeom, lightBrownMat);
     this.nose.position.z = 13.5;
     this.nose.position.y = 2.6;
     this.nose.castShadow = true;
     this.head.add(this.nose);
 
-    let mouthGeom = new THREE.CubeGeometry(4, 2, 4, 1);
+    let mouthGeom = new THREE.BoxGeometry(4, 2, 4, 1);
     mouthGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,3));
     mouthGeom.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/12));
     this.mouth = new THREE.Mesh(mouthGeom, brownMat);
@@ -283,7 +287,7 @@ const Hero = function() {
     this.head.add(this.mouth);
 
 
-    let pawFGeom = new THREE.CubeGeometry(3,3,3, 1);
+    let pawFGeom = new THREE.BoxGeometry(3,3,3, 1);
     this.pawFR = new THREE.Mesh(pawFGeom, lightBrownMat);
     this.pawFR.position.x = -2;
     this.pawFR.position.z = 6;
@@ -296,7 +300,7 @@ const Hero = function() {
     this.pawFL.castShadow = true;
     this.body.add(this.pawFL);
 
-    let pawBGeom = new THREE.CubeGeometry(3,3,6, 1);
+    let pawBGeom = new THREE.BoxGeometry(3,3,6, 1);
     this.pawBL = new THREE.Mesh(pawBGeom, lightBrownMat);
     this.pawBL.position.y = 1.5;
     this.pawBL.position.z = 0;
@@ -309,7 +313,7 @@ const Hero = function() {
     this.pawBR.castShadow = true;
     this.body.add(this.pawBR);
 
-    let earGeom = new THREE.CubeGeometry(7, 18, 2, 1);
+    earGeom = new THREE.BoxGeometry(7, 18, 2, 1);
     earGeom.vertices[6].x+=2;
     earGeom.vertices[6].z+=.5;
 
@@ -337,7 +341,7 @@ const Hero = function() {
     this.earR.castShadow = true;
     this.head.add(this.earR);
 
-    let eyeGeom = new THREE.CubeGeometry(2,4,4);
+    let eyeGeom = new THREE.BoxGeometry(2,4,4);
 
     this.eyeL = new THREE.Mesh(eyeGeom, whiteMat);
     this.eyeL.position.x = 5;
@@ -346,7 +350,7 @@ const Hero = function() {
     this.eyeL.castShadow = true;
     this.head.add(this.eyeL);
 
-    let irisGeom = new THREE.CubeGeometry(.6,2,2);
+    let irisGeom = new THREE.BoxGeometry(.6,2,2);
 
     this.iris = new THREE.Mesh(irisGeom, blackMat);
     this.iris.position.x = 1.2;
@@ -371,8 +375,8 @@ const Hero = function() {
 
 const BonusParticles = function(){
     this.mesh = new THREE.Group();
-    let bigParticleGeom = new THREE.CubeGeometry(10,10,10,1);
-    let smallParticleGeom = new THREE.CubeGeometry(5,5,5,1);
+    let bigParticleGeom = new THREE.BoxGeometry(10,10,10,1);
+    let smallParticleGeom = new THREE.BoxGeometry(5,5,5,1);
     this.parts = [];
     for (let i=0; i<10; i++){
         let partPink = new THREE.Mesh(bigParticleGeom, pinkMat);
@@ -511,16 +515,16 @@ const Monster = function(){
     this.mesh = new THREE.Group();
     this.body = new THREE.Group();
 
-    let torsoGeom = new THREE.CubeGeometry(15,15,20, 1);
+    let torsoGeom = new THREE.BoxGeometry(15,15,20, 1);
     this.torso = new THREE.Mesh(torsoGeom, blackMat);
 
-    let headGeom = new THREE.CubeGeometry(20,20,40, 1);
+    let headGeom = new THREE.BoxGeometry(20,20,40, 1);
     headGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,20));
     this.head = new THREE.Mesh(headGeom, blackMat);
     this.head.position.z = 12;
     this.head.position.y = 2;
 
-    let mouthGeom = new THREE.CubeGeometry(10,4,20, 1);
+    let mouthGeom = new THREE.BoxGeometry(10,4,20, 1);
     mouthGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,-2,10));
     this.mouth = new THREE.Mesh(mouthGeom, blackMat);
     this.mouth.position.y = -8;
@@ -531,7 +535,7 @@ const Monster = function(){
     this.heroHolder.position.z = 20;
     this.mouth.add(this.heroHolder);
 
-    let toothGeom = new THREE.CubeGeometry(2,2,1,1);
+    let toothGeom = new THREE.BoxGeometry(2,2,1,1);
 
     toothGeom.vertices[1].x-=1;
     toothGeom.vertices[4].x+=1;
@@ -558,7 +562,7 @@ const Monster = function(){
         this.mouth.add(toothr);
     }
 
-    let tongueGeometry = new THREE.CubeGeometry(6,1,14);
+    let tongueGeometry = new THREE.BoxGeometry(6,1,14);
     tongueGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,7));
 
     this.tongue = new THREE.Mesh(tongueGeometry, pinkMat);
@@ -566,7 +570,7 @@ const Monster = function(){
     this.tongue.rotation.x = -.2;
     this.mouth.add(this.tongue);
 
-    let noseGeom = new THREE.CubeGeometry(4,4,4, 1);
+    let noseGeom = new THREE.BoxGeometry(4,4,4, 1);
     this.nose = new THREE.Mesh(noseGeom, pinkMat);
     this.nose.position.z = 39.5;
     this.nose.position.y = 9;
@@ -574,7 +578,7 @@ const Monster = function(){
 
     this.head.add(this.mouth);
 
-    eyeGeom = new THREE.CubeGeometry(2,3,3);
+    let eyeGeom = new THREE.BoxGeometry(2,3,3);
 
     this.eyeL = new THREE.Mesh(eyeGeom, whiteMat);
     this.eyeL.position.x = 10;
@@ -583,7 +587,7 @@ const Monster = function(){
     this.eyeL.castShadow = true;
     this.head.add(this.eyeL);
 
-    let irisGeom = new THREE.CubeGeometry(.6,1,1);
+    let irisGeom = new THREE.BoxGeometry(.6,1,1);
 
     this.iris = new THREE.Mesh(irisGeom, blackMat);
     this.iris.position.x = 1.2;
@@ -597,7 +601,7 @@ const Monster = function(){
     this.head.add(this.eyeR);
 
 
-    let earGeom = new THREE.CubeGeometry(8, 6, 2, 1);
+    let earGeom = new THREE.BoxGeometry(8, 6, 2, 1);
     earGeom.vertices[1].x-=4;
     earGeom.vertices[4].x+=4;
     earGeom.vertices[5].x+=4;
@@ -620,7 +624,7 @@ const Monster = function(){
     this.earR.rotation.z = -this.earL.rotation.z;
     this.head.add(this.earR);
 
-    let eyeGeom = new THREE.CubeGeometry(2,4,4);
+    eyeGeom = new THREE.BoxGeometry(2,4,4);
 
     let tailGeom = new THREE.CylinderGeometry(5,2, 20, 4, 1);
     tailGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,10,0));
@@ -849,7 +853,7 @@ const Carrot = function() {
 
     this.body = new THREE.Mesh(bodyGeom, pinkMat);
 
-    let leafGeom = new THREE.CubeGeometry(5,10,1,1);
+    let leafGeom = new THREE.BoxGeometry(5,10,1,1);
     leafGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,5,0));
     leafGeom.vertices[2].x-=1;
     leafGeom.vertices[3].x-=1;
@@ -883,20 +887,20 @@ const Hedgehog = function() {
     this.angle = 0;
     this.status="ready";
     this.mesh = new THREE.Group();
-    let bodyGeom = new THREE.CubeGeometry(6,6,6,1);
+    let bodyGeom = new THREE.BoxGeometry(6,6,6,1);
     this.body = new THREE.Mesh(bodyGeom, blackMat);
 
-    let headGeom = new THREE.CubeGeometry(5,5,7,1);
+    let headGeom = new THREE.BoxGeometry(5,5,7,1);
     this.head= new THREE.Mesh(headGeom, lightBrownMat);
     this.head.position.z = 6;
     this.head.position.y = -.5;
 
-    let noseGeom = new THREE.CubeGeometry(1.5,1.5,1.5,1);
+    let noseGeom = new THREE.BoxGeometry(1.5,1.5,1.5,1);
     this.nose = new THREE.Mesh(noseGeom, blackMat);
     this.nose.position.z = 4;
     this.nose.position.y = 2;
 
-    let eyeGeom = new THREE.CubeGeometry(1,3,3);
+    let eyeGeom = new THREE.BoxGeometry(1,3,3);
 
     this.eyeL = new THREE.Mesh(eyeGeom, whiteMat);
     this.eyeL.position.x = 2.2;
@@ -905,7 +909,7 @@ const Hedgehog = function() {
     this.eyeL.castShadow = true;
     this.head.add(this.eyeL);
 
-    let irisGeom = new THREE.CubeGeometry(.5,1,1);
+    let irisGeom = new THREE.BoxGeometry(.5,1,1);
 
     this.iris = new THREE.Mesh(irisGeom, blackMat);
     this.iris.position.x = .5;
@@ -917,7 +921,7 @@ const Hedgehog = function() {
     this.eyeR.children[0].position.x = -this.iris.position.x;
     this.eyeR.position.x = -this.eyeL.position.x;
 
-    let spikeGeom = new THREE.CubeGeometry(.5,2,.5,1);
+    let spikeGeom = new THREE.BoxGeometry(.5,2,.5,1);
     spikeGeom.applyMatrix(new THREE.Matrix4().makeTranslation(0,1,0));
 
     for (let i=0; i<9; i++){
@@ -952,7 +956,7 @@ const Hedgehog = function() {
     }
 
     this.head.add(this.eyeR);
-    let earGeom = new THREE.CubeGeometry(2, 2, .5, 1);
+    let earGeom = new THREE.BoxGeometry(2, 2, .5, 1);
     this.earL = new THREE.Mesh(earGeom, lightBrownMat);
     this.earL.position.x = 2.5;
     this.earL.position.z = -2.5;
@@ -967,7 +971,7 @@ const Hedgehog = function() {
     this.earR.castShadow = true;
     this.head.add(this.earR);
 
-    let mouthGeom = new THREE.CubeGeometry( 1, 1,.5, 1);
+    let mouthGeom = new THREE.BoxGeometry( 1, 1,.5, 1);
     this.mouth = new THREE.Mesh(mouthGeom, blackMat);
     this.mouth.position.z = 3.5;
     this.mouth.position.y = -1.5;
@@ -1230,9 +1234,9 @@ function loop(){
     delta = clock.getDelta();
     updateFloorRotation();
 
-    if (gameStatus == "play"){
+    if (gameStatus === "play"){
 
-        if (hero.status == "running"){
+        if (hero.status === "running"){
             hero.run();
         }
         updateDistance();
@@ -1338,7 +1342,7 @@ const Trunc = function(){
 
         if (Math.random()>.7){
             let size = Math.random()*3;
-            let fruitGeometry = new THREE.CubeGeometry(size,size,size,1);
+            let fruitGeometry = new THREE.BoxGeometry(size,size,size,1);
             let matFruit = mats[Math.floor(Math.random()*mats.length)];
             let fruit = new THREE.Mesh(fruitGeometry, matFruit);
             fruit.position.x = v.x;
